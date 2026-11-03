@@ -269,25 +269,30 @@ class MainActivity : Activity() {
             keyboardWasVisible = visible
         }
 
-        val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
-        val back = FrameLayout(this).apply {
-            background = rounded(Color.rgb(255, 235, 239), 10)
-            isClickable = true
-            isFocusable = true
-            addView(TextView(this@MainActivity).apply {
-                text = "〈"
-                textSize = 25f
-                typeface = Typeface.create("sans-serif", Typeface.BOLD)
-                setTextColor(Color.rgb(194, 48, 76))
-                gravity = android.view.Gravity.CENTER
-                includeFontPadding = false
-            }, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
-            setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
+        val heading = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
         }
-        heading.addView(back, LinearLayout.LayoutParams(dp(42), dp(42)))
         heading.addView(TextView(this).apply {
             text = "新建通知"; textSize = 23f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(67, 39, 62)); setPadding(dp(14), 0, 0, 0)
+            setTextColor(Color.rgb(67, 39, 62))
+        }, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        })
+        val backButton = TextView(this).apply {
+            text = "返回"
+            textSize = 15f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            gravity = android.view.Gravity.CENTER
+            includeFontPadding = false
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(204, 48, 78), 11)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
+        }
+        heading.addView(backButton, LinearLayout.LayoutParams(dp(68), dp(40)).apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
         })
         root.addView(heading, matchWrap().apply { bottomMargin = dp(18) })
 
