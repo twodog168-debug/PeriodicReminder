@@ -38,6 +38,8 @@ class MainActivity : Activity() {
     private lateinit var runningCountLabel: TextView
     private var keyboardWasVisible = false
     private var interactionInProgress = false
+    private var spinnerInteractionInProgress = false
+    private var spinnerImeTarget: EditText? = null
     private var touchDownX = 0f
     private var touchDownY = 0f
     private var editDialogOpen = false
@@ -164,7 +166,7 @@ class MainActivity : Activity() {
             root.getWindowVisibleDisplayFrame(visibleFrame)
             val keyboardHeight = root.rootView.height - visibleFrame.bottom
             val keyboardVisible = keyboardHeight > dp(150)
-            if (keyboardWasVisible && !keyboardVisible) {
+            if (keyboardWasVisible && !keyboardVisible && !spinnerInteractionInProgress) {
                 (currentFocus as? EditText)?.let { focused -> focused.clearFocus(); root.requestFocus() }
             }
             keyboardWasVisible = keyboardVisible
@@ -259,9 +261,8 @@ class MainActivity : Activity() {
                     }
                 }
             } else if (!visible && keyboardWasVisible) {
-                // Spinner 打开下拉选项时输入法可能暂时收起；此时保留间隔输入框焦点。
-                val spinnerOwnsInteraction = ::unitSpinner.isInitialized && unitSpinner.hasFocus()
-                if (!spinnerOwnsInteraction) {
+                // Spinner 弹出菜单可能暂时隐藏输入法；不要在选择期间清除原输入框焦点。
+                if (!spinnerInteractionInProgress) {
                     (currentFocus as? EditText)?.let { focused -> focused.clearFocus(); root.requestFocus() }
                 }
             }
@@ -269,14 +270,20 @@ class MainActivity : Activity() {
         }
 
         val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
-        val back = actionButton("〈", Color.rgb(255, 235, 239), Color.rgb(194, 48, 76)).apply {
-            textSize = 25f
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            gravity = android.view.Gravity.CENTER
-            includeFontPadding = false
-            setPadding(0, 0, 0, 0)
+        val back = FrameLayout(this).apply {
+            background = rounded(Color.rgb(255, 235, 239), 10)
+            isClickable = true
+            isFocusable = true
+            addView(TextView(this@MainActivity).apply {
+                text = "〈"
+                textSize = 25f
+                typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                setTextColor(Color.rgb(194, 48, 76))
+                gravity = android.view.Gravity.CENTER
+                includeFontPadding = false
+            }, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
+            setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
         }
-        back.setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
         heading.addView(back, LinearLayout.LayoutParams(dp(42), dp(42)))
         heading.addView(TextView(this).apply {
             text = "新建通知"; textSize = 23f; typeface = Typeface.DEFAULT_BOLD
@@ -305,10 +312,7 @@ class MainActivity : Activity() {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("分钟", "小时", "天"))
             background = rounded(Color.rgb(255, 249, 250), 12, Color.rgb(237, 222, 230), 1)
             setSelection(1)
-            setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) intervalInput.requestFocus()
-                false
-            }
+            preserveImeWhenChoosingUnit(this)
         }
         intervalRow.addView(intervalInput, LinearLayout.LayoutParams(0, dp(48), 1.2f))
         intervalRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
@@ -553,10 +557,7 @@ class MainActivity : Activity() {
         val unitEdit = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("分钟", "小时", "天"))
             setSelection(intervalEdit.tag as Int)
-            setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) intervalEdit.requestFocus()
-                false
-            }
+            preserveImeWhenChoosingUnit(this)
         }
         intervalRow.addView(intervalEdit, LinearLayout.LayoutParams(0, dp(48), 1.2f))
         intervalRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
@@ -664,6 +665,37 @@ class MainActivity : Activity() {
             }
         }
         dialog.show()
+    }
+
+    // 打开单位下拉框时保留当时正在输入的 EditText；选择完成后恢复同一个输入框和键盘，
+    // 不强制把焦点转移到“间隔数值”输入框。
+    private fun preserveImeWhenChoosingUnit(spinner: Spinner) {
+        spinner.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                spinnerImeTarget = currentFocus as? EditText
+                spinnerInteractionInProgress = true
+            }
+            false
+        }
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                spinnerInteractionInProgress = false
+            }
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (spinnerInteractionInProgress) {
+                    val target = spinnerImeTarget
+                    spinner.postDelayed({
+                        if (target != null && target.isAttachedToWindow) {
+                            target.requestFocus()
+                            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                                .showSoftInput(target, InputMethodManager.SHOW_IMPLICIT)
+                        }
+                        spinnerInteractionInProgress = false
+                        spinnerImeTarget = null
+                    }, 120L)
+                }
+            }
+        }
     }
 
     private fun actionButton(textValue: String, bg: Int, fg: Int) = TextView(this).apply {
