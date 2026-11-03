@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -25,9 +26,17 @@ class ReminderReceiver : BroadcastReceiver() {
             context, NotificationIds.next(context), Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val text = if (r.totalCount == 0) "第 $occurrence 次" else "第 $occurrence 次（共 ${r.totalCount} 次）"
+        val text = if (r.totalCount == 0) {
+            "第 $occurrence 次"
+        } else {
+            "第 $occurrence / ${r.totalCount} 次"
+        }
+        val desktopIcon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            // Android 通知栏状态栏小图标必须使用单色资源；保留兼容的小图标。
             .setSmallIcon(R.drawable.ic_notification)
+            // 通知展开区域显示与桌面一致的应用图标。
+            .setLargeIcon(desktopIcon)
             .setContentTitle(r.title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
