@@ -67,7 +67,9 @@ class MainActivity : Activity() {
             val isTap = dx * dx + dy * dy <= touchSlop * touchSlop
 
             // 只有轻点非输入框区域才收起键盘；滑动页面时保留焦点和键盘。
-            if (isTap && ::root.isInitialized && findEditTextAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null) {
+            if (isTap && ::root.isInitialized &&
+                findEditTextAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null &&
+                findSpinnerAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null) {
                 val focused = currentFocus
                 if (focused is EditText) {
                     focused.clearFocus()
@@ -92,6 +94,22 @@ class MainActivity : Activity() {
         if (view is android.view.ViewGroup) {
             for (i in 0 until view.childCount) {
                 val found = findEditTextAt(view.getChildAt(i), x, y)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    // Spinner 弹出选项时可能暂时收起输入法；点击 Spinner 不应触发全局清焦点逻辑。
+    private fun findSpinnerAt(view: View, x: Int, y: Int): Spinner? {
+        if (view is Spinner) {
+            val rect = Rect()
+            view.getGlobalVisibleRect(rect)
+            if (rect.contains(x, y)) return view
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findSpinnerAt(view.getChildAt(i), x, y)
                 if (found != null) return found
             }
         }
@@ -241,16 +259,22 @@ class MainActivity : Activity() {
                     }
                 }
             } else if (!visible && keyboardWasVisible) {
-                (currentFocus as? EditText)?.let { focused -> focused.clearFocus(); root.requestFocus() }
+                // Spinner 打开下拉选项时输入法可能暂时收起；此时保留间隔输入框焦点。
+                val spinnerOwnsInteraction = ::unitSpinner.isInitialized && unitSpinner.hasFocus()
+                if (!spinnerOwnsInteraction) {
+                    (currentFocus as? EditText)?.let { focused -> focused.clearFocus(); root.requestFocus() }
+                }
             }
             keyboardWasVisible = visible
         }
 
         val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
         val back = actionButton("〈", Color.rgb(255, 235, 239), Color.rgb(194, 48, 76)).apply {
-            textSize = 27f
+            textSize = 25f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setPadding(0, 0, 0, dp(1))
+            gravity = android.view.Gravity.CENTER
+            includeFontPadding = false
+            setPadding(0, 0, 0, 0)
         }
         back.setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
         heading.addView(back, LinearLayout.LayoutParams(dp(42), dp(42)))
