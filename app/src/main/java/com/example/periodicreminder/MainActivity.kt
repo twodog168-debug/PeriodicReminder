@@ -78,10 +78,12 @@ class MainActivity : Activity() {
             val dy = ev.rawY - touchDownY
             val isTap = dx * dx + dy * dy <= touchSlop * touchSlop
 
-            // 只有轻点非输入框区域才收起键盘；滑动页面时保留焦点和键盘。
+            // 只有轻点非输入框、非 Spinner、非单选按钮区域才收起键盘；
+            // 滑动页面、点击单位下拉、点击“首次通知时间”单选按钮时都保留焦点和键盘。
             if (isTap && ::root.isInitialized &&
                 findEditTextAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null &&
-                findSpinnerAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null) {
+                findSpinnerAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null &&
+                findRadioAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null) {
                 val focused = currentFocus
                 if (focused is EditText) {
                     focused.clearFocus()
@@ -122,6 +124,22 @@ class MainActivity : Activity() {
         if (view is android.view.ViewGroup) {
             for (i in 0 until view.childCount) {
                 val found = findSpinnerAt(view.getChildAt(i), x, y)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    // 只认 RadioButton 本身：点中单选按钮不收键盘，点 RadioGroup 内部空白仍按空白处理。
+    private fun findRadioAt(view: View, x: Int, y: Int): RadioButton? {
+        if (view is RadioButton) {
+            val rect = Rect()
+            view.getGlobalVisibleRect(rect)
+            if (rect.contains(x, y)) return view
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findRadioAt(view.getChildAt(i), x, y)
                 if (found != null) return found
             }
         }
@@ -339,10 +357,12 @@ class MainActivity : Activity() {
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "按创建时间开始（创建后等待一个间隔）"
                 textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
+                isFocusable = false; isFocusableInTouchMode = false
             })
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "自定义首次通知时间"
                 textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
+                isFocusable = false; isFocusableInTouchMode = false
             })
             check(getChildAt(0).id)
         }
@@ -374,7 +394,9 @@ class MainActivity : Activity() {
         formCard.addView(dateTimeRow, matchWrap())
         dateTimeRow.visibility = View.GONE
         startModeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val y = scroll.scrollY
             dateTimeRow.visibility = if (checkedId == startModeGroup.getChildAt(1).id) View.VISIBLE else View.GONE
+            scroll.post { scroll.scrollTo(0, y) }
         }
 
         formCard.addView(fieldLabel("循环次数"))
@@ -608,6 +630,8 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(8), dp(22), 0)
         }
+        // 提前创建，供“首次通知时间”切换时保持滚动位置。
+        val dialogContent = ScrollView(this)
         val nameInput = EditText(this).apply {
             setSingleLine(true); setText(reminder.title); hint = "通知内容"; textSize = 15f
         }
@@ -646,10 +670,12 @@ class MainActivity : Activity() {
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "按创建时间开始（保存后等待一个间隔）"
                 textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
+                isFocusable = false; isFocusableInTouchMode = false
             })
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "自定义首次通知时间"
                 textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
+                isFocusable = false; isFocusableInTouchMode = false
             })
             // 编辑页面默认与新建页面一致：按创建时间开始。
             check(getChildAt(0).id)
@@ -682,14 +708,16 @@ class MainActivity : Activity() {
         content.addView(dateTimeRow, matchWrap())
         dateTimeRow.visibility = View.GONE
         startModeEdit.setOnCheckedChangeListener { _, checkedId ->
+            val y = dialogContent.scrollY
             dateTimeRow.visibility = if (checkedId == startModeEdit.getChildAt(1).id) View.VISIBLE else View.GONE
+            dialogContent.post { dialogContent.scrollTo(0, y) }
         }
         content.addView(TextView(this).apply {
             text = if (reminder.enabled) "保存后将按新的时间和间隔继续通知。" else "这条通知已经停止；编辑只修改内容，不会自动重新启动。"
             textSize = 12f; setTextColor(Color.rgb(130, 140, 155)); setPadding(0, dp(10), 0, 0)
         })
 
-        val dialogContent = ScrollView(this).apply { addView(content) }
+        dialogContent.addView(content)
         val dialog = AlertDialog.Builder(this)
             .setTitle("编辑通知")
             .setView(dialogContent)
