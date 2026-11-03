@@ -26,6 +26,8 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+private val BRAND_RED = Color.rgb(204, 48, 78)
+
 class MainActivity : Activity() {
     private lateinit var list: LinearLayout
     private lateinit var root: LinearLayout
@@ -190,7 +192,7 @@ class MainActivity : Activity() {
         val create = TextView(this).apply {
             text = "+"; textSize = 30f; typeface = Typeface.DEFAULT
             gravity = android.view.Gravity.CENTER; setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(204, 48, 78), 16)
+            background = rounded(BRAND_RED, 16)
             isClickable = true; isFocusable = true
             setOnClickListener { showCreatePage() }
         }
@@ -286,7 +288,7 @@ class MainActivity : Activity() {
             gravity = android.view.Gravity.CENTER
             includeFontPadding = false
             setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(204, 48, 78), 11)
+            background = rounded(BRAND_RED, 11)
             isClickable = true
             isFocusable = true
             setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
@@ -378,7 +380,7 @@ class MainActivity : Activity() {
         formCard.addView(countInput, matchWrap())
         root.addView(formCard, matchWrap())
 
-        val add = actionButton("创建通知", Color.rgb(204, 48, 78), Color.WHITE).apply {
+        val add = actionButton("创建通知", BRAND_RED, Color.WHITE).apply {
             textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, dp(14), 0, dp(14))
