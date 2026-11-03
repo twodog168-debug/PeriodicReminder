@@ -2,17 +2,18 @@ package com.example.periodicreminder
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlarmManager
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -21,22 +22,46 @@ import java.util.Locale
 
 class MainActivity : Activity() {
     private lateinit var list: LinearLayout
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    private lateinit var root: LinearLayout
+    private lateinit var scroll: ScrollView
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var chosenStart = System.currentTimeMillis() + 60_000L
     private lateinit var startLabel: TextView
 
+    private val refreshHandler = Handler(Looper.getMainLooper())
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            if (::list.isInitialized) renderList()
+            refreshHandler.postDelayed(this, 1000L)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         requestNotificationPermission()
         buildUi()
         restoreAlarms()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::list.isInitialized) renderList()
+        refreshHandler.removeCallbacks(refreshRunnable)
+        refreshHandler.postDelayed(refreshRunnable, 1000L)
+    }
+
+    override fun onPause() {
+        refreshHandler.removeCallbacks(refreshRunnable)
+        super.onPause()
+    }
+
     private fun buildUi() {
-        val scroll = ScrollView(this)
-        val root = LinearLayout(this).apply {
+        scroll = ScrollView(this)
+        root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 24, 24, 24)
+            isFocusableInTouchMode = true
         }
         scroll.addView(root)
         setContentView(scroll)
@@ -77,7 +102,11 @@ class MainActivity : Activity() {
         root.addView(startLabel)
 
         root.addView(label("循环次数（0 = 无限循环）"))
-        val count = EditText(this).apply { hint = "例如 10；0 表示无限"; setText("0"); inputType = 2 }
+        val count = EditText(this).apply {
+            hint = "例如 10；0 表示无限"
+            setText("10")
+            inputType = 2
+        }
         root.addView(count)
 
         val add = Button(this).apply { text = "创建提醒" }
@@ -94,25 +123,34 @@ class MainActivity : Activity() {
                 1 -> 3_600_000L
                 else -> 86_400_000L
             }
+            val now = System.currentTimeMillis()
+            val firstAt = if (chosenStart <= now) now + 1000L else chosenStart
             val r = Reminder(
                 id = ReminderStore.nextId(this),
                 title = name,
                 intervalMillis = n * multiplier,
-                startAt = chosenStart,
+                startAt = firstAt,
                 totalCount = loops,
-                nextAt = chosenStart
+                nextAt = firstAt
             )
             val all = ReminderStore.all(this).apply { add(r) }
             ReminderStore.save(this, all)
             AlarmScheduler.schedule(this, r)
+
             title.setText("")
+            title.clearFocus()
+            interval.clearFocus()
+            count.clearFocus()
+            root.requestFocus()
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(title.windowToken, 0)
+
             renderList()
             toast("提醒已创建")
         }
 
-        val permissionButton = Button(this).apply { text = "检查通知和精确闹钟权限" }
-        root.addView(permissionButton)
-        permissionButton.setOnClickListener { openAlarmSettings() }
+        // 已移除“检查通知和精确闹钟权限”按钮及其设置跳转功能。
+        // Android 13 及以上仍保留系统必要的通知授权请求。
 
         root.addView(label("已创建的提醒"))
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -139,6 +177,7 @@ class MainActivity : Activity() {
 
     private fun renderList() {
         if (!::list.isInitialized) return
+        val oldScrollY = if (::scroll.isInitialized) scroll.scrollY else 0
         list.removeAllViews()
         ReminderStore.all(this).forEach { r ->
             val card = LinearLayout(this).apply {
@@ -162,6 +201,7 @@ class MainActivity : Activity() {
                     if (r.enabled) "运行中；下次：" + dateFormat.format(Date(r.nextAt)) else "已停止"
                 textSize = 13f
             })
+
             val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val toggle = Button(this).apply { text = if (r.enabled) "暂停" else "恢复" }
             toggle.setOnClickListener {
@@ -175,41 +215,61 @@ class MainActivity : Activity() {
                     if (item.nextAt <= System.currentTimeMillis()) item.nextAt = System.currentTimeMillis() + item.intervalMillis
                     AlarmScheduler.schedule(this@MainActivity, item)
                 }
-                ReminderStore.save(this@MainActivity, all); renderList()
+                ReminderStore.save(this@MainActivity, all)
+                renderList()
             }
+
+            val stop = Button(this).apply {
+                text = "停止"
+                isEnabled = r.enabled
+            }
+            stop.setOnClickListener {
+                val all = ReminderStore.all(this@MainActivity)
+                val item = all.firstOrNull { it.id == r.id } ?: return@setOnClickListener
+                item.enabled = false
+                item.nextAt = 0L
+                AlarmScheduler.cancel(this@MainActivity, item.id)
+                ReminderStore.save(this@MainActivity, all)
+                renderList()
+                toast("提醒已停止")
+            }
+
             val delete = Button(this).apply { text = "删除" }
             delete.setOnClickListener {
                 AlarmScheduler.cancel(this@MainActivity, r.id)
                 ReminderStore.save(this@MainActivity, ReminderStore.all(this@MainActivity).filterNot { it.id == r.id })
                 renderList()
             }
-            actions.addView(toggle); actions.addView(delete)
+            actions.addView(toggle)
+            actions.addView(stop)
+            actions.addView(delete)
             card.addView(actions)
             val lp = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 }
             list.addView(card, lp)
         }
         if (list.childCount == 0) list.addView(TextView(this).apply { text = "还没有提醒任务"; setPadding(0, 12, 0, 12) })
+        if (oldScrollY > 0) scroll.post { scroll.scrollTo(0, oldScrollY) }
     }
 
     private fun restoreAlarms() {
-        ReminderStore.all(this).filter { it.enabled }.forEach { AlarmScheduler.schedule(this, it) }
+        val all = ReminderStore.all(this)
+        var changed = false
+        val now = System.currentTimeMillis()
+        all.filter { it.enabled }.forEach { r ->
+            if (r.nextAt <= now) {
+                r.nextAt = now + 1000L
+                changed = true
+            }
+            AlarmScheduler.schedule(this, r)
+        }
+        if (changed) ReminderStore.save(this, all)
+        renderList()
     }
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 10)
         }
-    }
-
-    private fun openAlarmSettings() {
-        if (Build.VERSION.SDK_INT >= 31) {
-            val am = getSystemService(ALARM_SERVICE) as AlarmManager
-            if (!am.canScheduleExactAlarms()) {
-                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
-                return
-            }
-        }
-        toast("请同时确认系统设置中允许本应用发送通知，并允许自启动/后台弹出通知。")
     }
 
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_LONG).show()
