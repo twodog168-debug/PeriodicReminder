@@ -6,11 +6,13 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -24,10 +26,13 @@ class MainActivity : Activity() {
     private lateinit var list: LinearLayout
     private lateinit var root: LinearLayout
     private lateinit var scroll: ScrollView
+    private lateinit var titleInput: EditText
+    private lateinit var intervalInput: EditText
+    private lateinit var countInput: EditText
+    private lateinit var unitSpinner: Spinner
+    private lateinit var startLabel: TextView
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var chosenStart = System.currentTimeMillis() + 60_000L
-    private lateinit var startLabel: TextView
-
     private val refreshHandler = Handler(Looper.getMainLooper())
     private val refreshRunnable = object : Runnable {
         override fun run() {
@@ -39,6 +44,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        window.statusBarColor = Color.rgb(245, 247, 251)
+        window.navigationBarColor = Color.rgb(245, 247, 251)
+        if (Build.VERSION.SDK_INT >= 23) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         requestNotificationPermission()
         buildUi()
         restoreAlarms()
@@ -57,153 +65,192 @@ class MainActivity : Activity() {
     }
 
     private fun buildUi() {
-        scroll = ScrollView(this)
+        scroll = ScrollView(this).apply { setBackgroundColor(Color.rgb(245, 247, 251)); clipToPadding = false }
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 24, 24, 24)
+            setPadding(dp(20), dp(18), dp(20), dp(28))
             isFocusableInTouchMode = true
         }
         scroll.addView(root)
         setContentView(scroll)
 
-        root.addView(TextView(this).apply {
+        val header = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(2), dp(8), dp(2), dp(18)) }
+        header.addView(TextView(this).apply {
             text = "周期提醒"
-            textSize = 26f
-            setTextColor(0xFF202124.toInt())
+            textSize = 28f
+            setTextColor(Color.rgb(27, 40, 60))
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
         })
-        root.addView(TextView(this).apply {
-            text = "设置一次，按分钟、小时或天自动重复通知。"
+        header.addView(TextView(this).apply {
+            text = "把重要的事，交给提醒来记住。"
             textSize = 14f
-            setPadding(0, 8, 0, 20)
+            setTextColor(Color.rgb(119, 130, 148))
+            setPadding(0, dp(5), 0, 0)
         })
+        root.addView(header)
 
-        val title = EditText(this).apply { hint = "提醒内容，例如：喝水、休息" }
-        root.addView(label("提醒内容"))
-        root.addView(title)
-
-        root.addView(label("提醒间隔"))
-        val intervalRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val interval = EditText(this).apply {
-            hint = "间隔数值"; setText("60"); inputType = 2
+        val formCard = card()
+        formCard.addView(sectionTitle("新建提醒", "设置内容和重复规则"))
+        formCard.addView(fieldLabel("提醒内容"))
+        titleInput = EditText(this).apply {
+            hint = "例如：喝水、休息、吃药"
+            textSize = 15f
+            singleLine = true
+            setTextColor(Color.rgb(38, 48, 65))
+            setHintTextColor(Color.rgb(155, 165, 180))
+            background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
         }
-        intervalRow.addView(interval, LinearLayout.LayoutParams(0, -2, 1f))
-        val unit = Spinner(this)
-        unit.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("分钟", "小时", "天"))
-        intervalRow.addView(unit, LinearLayout.LayoutParams(0, -2, 1f))
-        root.addView(intervalRow)
+        formCard.addView(titleInput, matchWrap())
 
-        root.addView(label("首次提醒时间"))
+        formCard.addView(fieldLabel("提醒间隔"))
+        val intervalRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        intervalInput = EditText(this).apply {
+            hint = "数值"; setText("60"); inputType = 2; textSize = 15f; singleLine = true
+            setTextColor(Color.rgb(38, 48, 65)); background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+        }
+        unitSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("分钟", "小时", "天"))
+            background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+        }
+        intervalRow.addView(intervalInput, LinearLayout.LayoutParams(0, dp(48), 1.2f))
+        intervalRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
+        intervalRow.addView(unitSpinner, LinearLayout.LayoutParams(0, dp(48), 1f))
+        formCard.addView(intervalRow, matchWrap())
+
+        formCard.addView(fieldLabel("首次提醒时间"))
         startLabel = TextView(this).apply {
-            textSize = 16f
-            setPadding(0, 12, 0, 12)
-            text = "选择开始时间：" + dateFormat.format(Date(chosenStart))
+            text = "◷   " + dateFormat.format(Date(chosenStart)) + "     修改时间"
+            textSize = 14f
+            setTextColor(Color.rgb(45, 91, 139))
+            background = rounded(Color.rgb(239, 246, 253), 12, Color.rgb(218, 232, 247), 1)
+            setPadding(dp(14), dp(14), dp(14), dp(14))
         }
         startLabel.setOnClickListener { chooseDateTime() }
-        root.addView(startLabel)
+        formCard.addView(startLabel, matchWrap())
 
-        root.addView(label("循环次数（0 = 无限循环）"))
-        val count = EditText(this).apply {
-            hint = "例如 10；0 表示无限"
-            setText("10")
-            inputType = 2
+        formCard.addView(fieldLabel("循环次数"))
+        countInput = EditText(this).apply {
+            hint = "默认 10 次，填写 0 表示无限循环"
+            setText("10"); inputType = 2; textSize = 15f; singleLine = true
+            setTextColor(Color.rgb(38, 48, 65)); background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
         }
-        root.addView(count)
+        formCard.addView(countInput, matchWrap())
 
-        val add = Button(this).apply { text = "创建提醒" }
-        root.addView(add)
-        add.setOnClickListener {
-            val name = title.text.toString().trim()
-            val n = interval.text.toString().toLongOrNull()
-            val loops = count.text.toString().toIntOrNull()
-            if (name.isEmpty()) { toast("请填写提醒内容"); return@setOnClickListener }
-            if (n == null || n <= 0L) { toast("提醒间隔必须大于0"); return@setOnClickListener }
-            if (loops == null || loops < 0) { toast("循环次数不能小于0"); return@setOnClickListener }
-            val multiplier = when (unit.selectedItemPosition) {
-                0 -> 60_000L
-                1 -> 3_600_000L
-                else -> 86_400_000L
-            }
-            val now = System.currentTimeMillis()
-            val firstAt = if (chosenStart <= now) now + 1000L else chosenStart
-            val r = Reminder(
-                id = ReminderStore.nextId(this),
-                title = name,
-                intervalMillis = n * multiplier,
-                startAt = firstAt,
-                totalCount = loops,
-                nextAt = firstAt
-            )
-            val all = ReminderStore.all(this).apply { add(r) }
-            ReminderStore.save(this, all)
-            AlarmScheduler.schedule(this, r)
-
-            title.setText("")
-            title.clearFocus()
-            interval.clearFocus()
-            count.clearFocus()
-            root.requestFocus()
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.hideSoftInputFromWindow(title.windowToken, 0)
-
-            renderList()
-            toast("提醒已创建")
+        val add = TextView(this).apply {
+            text = "＋   创建提醒"
+            textSize = 16f
+            gravity = android.view.Gravity.CENTER
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(41, 111, 183), 13)
+            setPadding(0, dp(15), 0, dp(15))
+            isClickable = true
+            isFocusable = true
         }
+        val addLp = matchWrap().apply { topMargin = dp(18) }
+        formCard.addView(add, addLp)
+        add.setOnClickListener { createReminder() }
+        root.addView(formCard, matchWrap())
 
-        // 已移除“检查通知和精确闹钟权限”按钮及其设置跳转功能。
-        // Android 13 及以上仍保留系统必要的通知授权请求。
-
-        root.addView(label("已创建的提醒"))
+        val taskHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(2), dp(24), dp(2), dp(10))
+        }
+        taskHeader.addView(TextView(this).apply {
+            text = "提醒列表"; textSize = 20f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(34, 45, 62))
+        })
+        taskHeader.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        taskHeader.addView(TextView(this).apply {
+            text = "自动更新"; textSize = 11f; setTextColor(Color.rgb(40, 132, 104))
+            background = rounded(Color.rgb(230, 246, 239), 20); setPadding(dp(9), dp(5), dp(9), dp(5))
+        })
+        root.addView(taskHeader)
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(list)
+        root.addView(list, matchWrap())
         renderList()
     }
 
-    private fun label(s: String) = TextView(this).apply {
-        text = s; textSize = 15f; setPadding(0, 18, 0, 4)
-        setTextColor(0xFF444444.toInt())
+    private fun createReminder() {
+        val name = titleInput.text.toString().trim()
+        val n = intervalInput.text.toString().toLongOrNull()
+        val loops = countInput.text.toString().toIntOrNull()
+        if (name.isEmpty()) { toast("请填写提醒内容"); titleInput.requestFocus(); return }
+        if (n == null || n <= 0L) { toast("提醒间隔必须大于0"); intervalInput.requestFocus(); return }
+        if (loops == null || loops < 0) { toast("循环次数不能小于0"); countInput.requestFocus(); return }
+        val multiplier = when (unitSpinner.selectedItemPosition) { 0 -> 60_000L; 1 -> 3_600_000L; else -> 86_400_000L }
+        val now = System.currentTimeMillis()
+        val firstAt = if (chosenStart <= now) now + 1000L else chosenStart
+        val r = Reminder(
+            id = ReminderStore.nextId(this), title = name, intervalMillis = n * multiplier,
+            startAt = firstAt, totalCount = loops, nextAt = firstAt
+        )
+        val all = ReminderStore.all(this).apply { add(r) }
+        ReminderStore.save(this, all)
+        AlarmScheduler.schedule(this, r)
+        titleInput.setText("")
+        titleInput.clearFocus(); intervalInput.clearFocus(); countInput.clearFocus(); root.requestFocus()
+        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(titleInput.windowToken, 0)
+        renderList()
+        toast("提醒已创建")
     }
 
-    private fun chooseDateTime() {
-        val c = Calendar.getInstance().apply { timeInMillis = chosenStart }
-        DatePickerDialog(this, { _, y, m, d ->
-            c.set(Calendar.YEAR, y); c.set(Calendar.MONTH, m); c.set(Calendar.DAY_OF_MONTH, d)
-            TimePickerDialog(this, { _, h, min ->
-                c.set(Calendar.HOUR_OF_DAY, h); c.set(Calendar.MINUTE, min); c.set(Calendar.SECOND, 0)
-                chosenStart = c.timeInMillis
-                startLabel.text = "选择开始时间：" + dateFormat.format(Date(chosenStart))
-            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
-        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+    private fun sectionTitle(title: String, subtitle: String): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        addView(TextView(this@MainActivity).apply { text = title; textSize = 19f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(34, 45, 62)) })
+        addView(TextView(this@MainActivity).apply { text = subtitle; textSize = 12f; setTextColor(Color.rgb(139, 149, 165)); setPadding(0, dp(3), 0, dp(10)) })
+    }
+
+    private fun fieldLabel(s: String) = TextView(this).apply {
+        text = s; textSize = 13f; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        setTextColor(Color.rgb(82, 96, 116)); setPadding(dp(1), dp(15), 0, dp(7))
     }
 
     private fun renderList() {
         if (!::list.isInitialized) return
-        val oldScrollY = if (::scroll.isInitialized) scroll.scrollY else 0
+        val oldScrollY = scroll.scrollY
         list.removeAllViews()
-        ReminderStore.all(this).forEach { r ->
-            val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(12, 12, 12, 12)
-                setBackgroundColor(0xFFF1F3F4.toInt())
-            }
-            val unitText = when {
-                r.intervalMillis % 86_400_000L == 0L -> "${r.intervalMillis / 86_400_000L}天"
-                r.intervalMillis % 3_600_000L == 0L -> "${r.intervalMillis / 3_600_000L}小时"
-                else -> "${r.intervalMillis / 60_000L}分钟"
-            }
-            card.addView(TextView(this).apply {
-                text = r.title
-                textSize = 18f
-                setTextColor(0xFF202124.toInt())
+        val reminders = ReminderStore.all(this).sortedByDescending { it.id }
+        reminders.forEach { r ->
+            val itemCard = card().apply { setPadding(dp(15), dp(14), dp(15), dp(13)) }
+            val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            top.addView(TextView(this).apply {
+                text = r.title; textSize = 17f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(34, 45, 62)); maxLines = 2
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            val statusText = when { r.enabled -> "运行中"; r.nextAt == 0L -> "已停止"; else -> "已暂停" }
+            val statusColor = when { r.enabled -> Color.rgb(34, 132, 98); r.nextAt == 0L -> Color.rgb(183, 91, 69); else -> Color.rgb(117, 128, 145) }
+            val statusBg = when { r.enabled -> Color.rgb(231, 246, 239); r.nextAt == 0L -> Color.rgb(252, 239, 235); else -> Color.rgb(239, 242, 246) }
+            top.addView(TextView(this).apply {
+                text = statusText; textSize = 11f; setTextColor(statusColor); background = rounded(statusBg, 20)
+                setPadding(dp(10), dp(5), dp(10), dp(5))
             })
-            card.addView(TextView(this).apply {
-                val total = if (r.totalCount == 0) "无限" else r.totalCount.toString()
-                text = "间隔：$unitText · 已通知：${r.sentCount}/$total · " +
-                    if (r.enabled) "运行中；下次：" + dateFormat.format(Date(r.nextAt)) else "已停止"
-                textSize = 13f
+            itemCard.addView(top)
+
+            val unitText = when {
+                r.intervalMillis % 86_400_000L == 0L -> "${r.intervalMillis / 86_400_000L} 天"
+                r.intervalMillis % 3_600_000L == 0L -> "${r.intervalMillis / 3_600_000L} 小时"
+                else -> "${r.intervalMillis / 60_000L} 分钟"
+            }
+            val total = if (r.totalCount == 0) "无限" else r.totalCount.toString()
+            itemCard.addView(TextView(this).apply {
+                text = "每隔 $unitText   ·   已通知 ${r.sentCount}/$total"
+                textSize = 12f; setTextColor(Color.rgb(119, 131, 149)); setPadding(0, dp(8), 0, dp(8))
+            })
+            val nextText = when {
+                r.enabled -> "下次提醒  ${dateFormat.format(Date(r.nextAt))}"
+                r.nextAt > 0L -> "下次提醒  ${dateFormat.format(Date(r.nextAt))}（暂停中）"
+                else -> "下次提醒  —"
+            }
+            itemCard.addView(TextView(this).apply {
+                text = nextText; textSize = 13f; setTextColor(Color.rgb(54, 91, 129))
+                background = rounded(Color.rgb(242, 247, 252), 9); setPadding(dp(10), dp(9), dp(10), dp(9))
             })
 
-            val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            val toggle = Button(this).apply { text = if (r.enabled) "暂停" else "恢复" }
+            val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, dp(12), 0, 0) }
+            val toggle = actionButton(if (r.enabled) "暂停" else "恢复", Color.rgb(235, 241, 248), Color.rgb(57, 91, 127))
             toggle.setOnClickListener {
                 val all = ReminderStore.all(this@MainActivity)
                 val item = all.firstOrNull { it.id == r.id } ?: return@setOnClickListener
@@ -215,40 +262,71 @@ class MainActivity : Activity() {
                     if (item.nextAt <= System.currentTimeMillis()) item.nextAt = System.currentTimeMillis() + item.intervalMillis
                     AlarmScheduler.schedule(this@MainActivity, item)
                 }
-                ReminderStore.save(this@MainActivity, all)
-                renderList()
+                ReminderStore.save(this@MainActivity, all); renderList()
             }
-
-            val stop = Button(this).apply {
-                text = "停止"
-                isEnabled = r.enabled
-            }
+            val stop = actionButton("停止", Color.rgb(252, 241, 235), Color.rgb(172, 91, 62)).apply { isEnabled = r.enabled; alpha = if (r.enabled) 1f else 0.45f }
             stop.setOnClickListener {
                 val all = ReminderStore.all(this@MainActivity)
                 val item = all.firstOrNull { it.id == r.id } ?: return@setOnClickListener
-                item.enabled = false
-                item.nextAt = 0L
+                item.enabled = false; item.nextAt = 0L
                 AlarmScheduler.cancel(this@MainActivity, item.id)
-                ReminderStore.save(this@MainActivity, all)
-                renderList()
-                toast("提醒已停止")
+                ReminderStore.save(this@MainActivity, all); renderList(); toast("提醒已停止")
             }
-
-            val delete = Button(this).apply { text = "删除" }
+            val delete = actionButton("删除", Color.rgb(244, 245, 247), Color.rgb(111, 120, 134))
             delete.setOnClickListener {
                 AlarmScheduler.cancel(this@MainActivity, r.id)
                 ReminderStore.save(this@MainActivity, ReminderStore.all(this@MainActivity).filterNot { it.id == r.id })
                 renderList()
             }
-            actions.addView(toggle)
-            actions.addView(stop)
-            actions.addView(delete)
-            card.addView(actions)
-            val lp = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 }
-            list.addView(card, lp)
+            actions.addView(toggle, LinearLayout.LayoutParams(0, dp(40), 1f))
+            actions.addView(space(8), LinearLayout.LayoutParams(dp(8), 1))
+            actions.addView(stop, LinearLayout.LayoutParams(0, dp(40), 1f))
+            actions.addView(space(8), LinearLayout.LayoutParams(dp(8), 1))
+            actions.addView(delete, LinearLayout.LayoutParams(0, dp(40), 1f))
+            itemCard.addView(actions)
+            list.addView(itemCard, matchWrap().apply { bottomMargin = dp(12) })
         }
-        if (list.childCount == 0) list.addView(TextView(this).apply { text = "还没有提醒任务"; setPadding(0, 12, 0, 12) })
+        if (list.childCount == 0) {
+            val empty = card().apply { gravity = android.view.Gravity.CENTER; setPadding(dp(20), dp(28), dp(20), dp(28)) }
+            empty.addView(TextView(this).apply { text = "还没有提醒"; textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(87, 101, 120)) })
+            empty.addView(TextView(this).apply { text = "在上方创建一条提醒，它就会出现在这里。"; textSize = 12f; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(145, 154, 168)); setPadding(0, dp(6), 0, 0) })
+            list.addView(empty, matchWrap())
+        }
         if (oldScrollY > 0) scroll.post { scroll.scrollTo(0, oldScrollY) }
+    }
+
+    private fun actionButton(textValue: String, bg: Int, fg: Int) = TextView(this).apply {
+        text = textValue; textSize = 13f; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        gravity = android.view.Gravity.CENTER; setTextColor(fg); background = rounded(bg, 10)
+        isClickable = true; isFocusable = true
+    }
+
+    private fun card() = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(16), dp(16), dp(16), dp(16))
+        background = rounded(Color.WHITE, 17, Color.rgb(235, 238, 243), 1)
+        elevation = dp(2).toFloat()
+    }
+
+    private fun rounded(color: Int, radius: Int, strokeColor: Int? = null, strokeWidth: Int = 0): GradientDrawable = GradientDrawable().apply {
+        setColor(color); cornerRadius = dp(radius).toFloat()
+        if (strokeColor != null && strokeWidth > 0) setStroke(dp(strokeWidth), strokeColor)
+    }
+
+    private fun matchWrap() = LinearLayout.LayoutParams(-1, -2)
+    private fun space(height: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(height, 1) }
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun chooseDateTime() {
+        val c = Calendar.getInstance().apply { timeInMillis = chosenStart }
+        DatePickerDialog(this, { _, y, m, d ->
+            c.set(Calendar.YEAR, y); c.set(Calendar.MONTH, m); c.set(Calendar.DAY_OF_MONTH, d)
+            TimePickerDialog(this, { _, h, min ->
+                c.set(Calendar.HOUR_OF_DAY, h); c.set(Calendar.MINUTE, min); c.set(Calendar.SECOND, 0)
+                chosenStart = c.timeInMillis
+                startLabel.text = "◷   " + dateFormat.format(Date(chosenStart)) + "     修改时间"
+            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
     }
 
     private fun restoreAlarms() {
@@ -256,10 +334,7 @@ class MainActivity : Activity() {
         var changed = false
         val now = System.currentTimeMillis()
         all.filter { it.enabled }.forEach { r ->
-            if (r.nextAt <= now) {
-                r.nextAt = now + 1000L
-                changed = true
-            }
+            if (r.nextAt <= now) { r.nextAt = now + 1000L; changed = true }
             AlarmScheduler.schedule(this, r)
         }
         if (changed) ReminderStore.save(this, all)
