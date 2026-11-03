@@ -42,8 +42,8 @@ object ReminderTiming {
 }
 
 object ReminderStore {
-    private const val PREFS = "reminders"
-    private const val KEY = "items"
+    const val PREFS = "reminders"
+    const val KEY = "items"
 
     fun all(context: Context): MutableList<Reminder> {
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"

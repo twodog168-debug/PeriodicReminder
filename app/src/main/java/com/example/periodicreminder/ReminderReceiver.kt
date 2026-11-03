@@ -21,8 +21,11 @@ class ReminderReceiver : BroadcastReceiver() {
         // 当前这条通知序号就是 sentCount + 1。
         val occurrence = r.sentCount + 1
         createChannel(context)
+
+        // 通知 ID 只生成一次，避免重复写入 SharedPreferences。
+        val notifId = NotificationIds.next(context)
         val open = PendingIntent.getActivity(
-            context, NotificationIds.next(context), Intent(context, MainActivity::class.java),
+            context, notifId, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val text = if (r.totalCount == 0) {
@@ -43,7 +46,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .build()
 
         try {
-            NotificationManagerCompat.from(context).notify(NotificationIds.next(context), notification)
+            NotificationManagerCompat.from(context).notify(notifId, notification)
         } catch (_: SecurityException) { }
 
         r.sentCount = occurrence
