@@ -133,23 +133,30 @@ class MainActivity : Activity() {
             keyboardWasVisible = keyboardVisible
         }
 
-        val header = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(2), dp(8), dp(2), dp(18)) }
-        header.addView(TextView(this).apply {
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(2), dp(8), dp(2), dp(22))
+        }
+        val headerText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        headerText.addView(TextView(this).apply {
             text = "周期提醒"; textSize = 28f; setTextColor(Color.rgb(27, 40, 60))
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
         })
-        header.addView(TextView(this).apply {
+        headerText.addView(TextView(this).apply {
             text = "把重要的事，交给提醒来记住。"; textSize = 14f
             setTextColor(Color.rgb(119, 130, 148)); setPadding(0, dp(5), 0, 0)
         })
-        root.addView(header)
-
-        val create = actionButton("＋   新建提醒", Color.rgb(41, 111, 183), Color.WHITE).apply {
-            textSize = 16f; typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dp(15), 0, dp(15))
+        header.addView(headerText, LinearLayout.LayoutParams(0, -2, 1f))
+        val create = TextView(this).apply {
+            text = "+"; textSize = 30f; typeface = Typeface.DEFAULT
+            gravity = android.view.Gravity.CENTER; setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(41, 111, 183), 16)
+            isClickable = true; isFocusable = true
+            setOnClickListener { showCreatePage() }
         }
-        create.setOnClickListener { showCreatePage() }
-        root.addView(create, matchWrap().apply { bottomMargin = dp(20) })
+        header.addView(create, LinearLayout.LayoutParams(dp(48), dp(48)))
+        root.addView(header)
 
         val taskHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
@@ -247,24 +254,34 @@ class MainActivity : Activity() {
             check(getChildAt(0).id)
         }
         formCard.addView(startModeGroup, matchWrap())
-        val startTimeValue = TextView(this).apply {
-            text = dateFormat.format(Date(chosenStart)); textSize = 13f
-            setTextColor(Color.rgb(90, 105, 125)); setPadding(dp(2), dp(7), 0, dp(4))
+        val startDateValue = TextView(this).apply {
+            text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(chosenStart))
+            textSize = 13f; setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
         }
-        val chooseTime = actionButton("选择日期和时间", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
-            setPadding(dp(12), dp(13), dp(12), dp(13)); gravity = android.view.Gravity.CENTER
+        val startClockValue = TextView(this).apply {
+            text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(chosenStart))
+            textSize = 13f; setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
         }
-        chooseTime.setOnClickListener {
-            chooseDateTime { chosenStart = it; startTimeValue.text = dateFormat.format(Date(chosenStart)) }
+        val dateButton = actionButton("选择日期", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+            setPadding(dp(10), dp(12), dp(10), dp(12))
+            setOnClickListener { chooseDateOnly(chosenStart) { chosenStart = it; startDateValue.text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } }
         }
-        formCard.addView(chooseTime, matchWrap())
-        formCard.addView(startTimeValue, matchWrap())
-        chooseTime.visibility = View.GONE
-        startTimeValue.visibility = View.GONE
+        val clockButton = actionButton("调整时间", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+            setPadding(dp(10), dp(12), dp(10), dp(12))
+            setOnClickListener { chooseTimeOnly(chosenStart) { chosenStart = it; startClockValue.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it)) } }
+        }
+        val dateTimeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        val dateColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = android.view.Gravity.CENTER }
+        dateColumn.addView(dateButton, matchWrap()); dateColumn.addView(startDateValue, matchWrap())
+        val clockColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = android.view.Gravity.CENTER }
+        clockColumn.addView(clockButton, matchWrap()); clockColumn.addView(startClockValue, matchWrap())
+        dateTimeRow.addView(dateColumn, LinearLayout.LayoutParams(0, -2, 1f))
+        dateTimeRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
+        dateTimeRow.addView(clockColumn, LinearLayout.LayoutParams(0, -2, 1f))
+        formCard.addView(dateTimeRow, matchWrap())
+        dateTimeRow.visibility = View.GONE
         startModeGroup.setOnCheckedChangeListener { _, checkedId ->
-            val custom = checkedId == startModeGroup.getChildAt(1).id
-            chooseTime.visibility = if (custom) View.VISIBLE else View.GONE
-            startTimeValue.visibility = if (custom) View.VISIBLE else View.GONE
+            dateTimeRow.visibility = if (checkedId == startModeGroup.getChildAt(1).id) View.VISIBLE else View.GONE
         }
 
         formCard.addView(fieldLabel("循环次数"))
@@ -416,7 +433,7 @@ class MainActivity : Activity() {
         if (list.childCount == 0) {
             val empty = card().apply { gravity = android.view.Gravity.CENTER; setPadding(dp(20), dp(28), dp(20), dp(28)) }
             empty.addView(TextView(this).apply { text = "还没有提醒"; textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(87, 101, 120)) })
-            empty.addView(TextView(this).apply { text = "点击上方“新建提醒”，添加你的第一条提醒。"; textSize = 12f; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(145, 154, 168)); setPadding(0, dp(6), 0, 0) })
+            empty.addView(TextView(this).apply { text = "点击右上角“＋”，添加你的第一条提醒。"; textSize = 12f; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(145, 154, 168)); setPadding(0, dp(6), 0, 0) })
             list.addView(empty, matchWrap())
         }
         if (oldScrollY > 0) scroll.post { scroll.scrollTo(0, oldScrollY) }
@@ -453,25 +470,31 @@ class MainActivity : Activity() {
         content.addView(fieldLabel("提醒间隔")); content.addView(intervalRow, matchWrap())
 
         var editedAt = if (reminder.nextAt > System.currentTimeMillis()) reminder.nextAt else System.currentTimeMillis() + reminder.intervalMillis
-        val timeValue = TextView(this).apply {
-            text = dateFormat.format(Date(editedAt)); textSize = 13f
-            setTextColor(Color.rgb(90, 105, 125)); setPadding(dp(2), dp(7), 0, dp(4))
+        val dateValue = TextView(this).apply {
+            text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(editedAt)); textSize = 13f
+            setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
         }
-        val timeButton = actionButton("选择日期和时间", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
-            setPadding(dp(12), dp(13), dp(12), dp(13))
+        val clockValue = TextView(this).apply {
+            text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(editedAt)); textSize = 13f
+            setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
         }
-        timeButton.setOnClickListener {
-            val c = Calendar.getInstance().apply { timeInMillis = editedAt }
-            DatePickerDialog(this, { _, y, m, d ->
-                c.set(Calendar.YEAR, y); c.set(Calendar.MONTH, m); c.set(Calendar.DAY_OF_MONTH, d)
-                TimePickerDialog(this, { _, h, min ->
-                    c.set(Calendar.HOUR_OF_DAY, h); c.set(Calendar.MINUTE, min); c.set(Calendar.SECOND, 0)
-                    editedAt = c.timeInMillis
-                    timeValue.text = dateFormat.format(Date(editedAt))
-                }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
-            }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+        val dateButton = actionButton("修改日期", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+            setPadding(dp(10), dp(12), dp(10), dp(12))
+            setOnClickListener { chooseDateOnly(editedAt) { editedAt = it; dateValue.text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } }
         }
-        content.addView(fieldLabel("下次提醒时间")); content.addView(timeButton, matchWrap()); content.addView(timeValue, matchWrap())
+        val clockButton = actionButton("调整时间", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+            setPadding(dp(10), dp(12), dp(10), dp(12))
+            setOnClickListener { chooseTimeOnly(editedAt) { editedAt = it; clockValue.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it)) } }
+        }
+        val dateTimeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        val dateColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = android.view.Gravity.CENTER }
+        dateColumn.addView(dateButton, matchWrap()); dateColumn.addView(dateValue, matchWrap())
+        val clockColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = android.view.Gravity.CENTER }
+        clockColumn.addView(clockButton, matchWrap()); clockColumn.addView(clockValue, matchWrap())
+        dateTimeRow.addView(dateColumn, LinearLayout.LayoutParams(0, -2, 1f))
+        dateTimeRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
+        dateTimeRow.addView(clockColumn, LinearLayout.LayoutParams(0, -2, 1f))
+        content.addView(fieldLabel("下次提醒时间")); content.addView(dateTimeRow, matchWrap())
         content.addView(TextView(this).apply {
             text = if (reminder.enabled) "保存后将按新的时间和间隔继续提醒。" else "这条提醒已经停止；编辑只修改内容，不会自动重新启动。"
             textSize = 12f; setTextColor(Color.rgb(130, 140, 155)); setPadding(0, dp(10), 0, 0)
@@ -536,15 +559,21 @@ class MainActivity : Activity() {
     private fun space(height: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(height, 1) }
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
 
-    private fun chooseDateTime(onSelected: (Long) -> Unit) {
-        val c = Calendar.getInstance().apply { timeInMillis = chosenStart }
+    private fun chooseDateOnly(timestamp: Long, onSelected: (Long) -> Unit) {
+        val c = Calendar.getInstance().apply { timeInMillis = timestamp }
         DatePickerDialog(this, { _, y, m, d ->
             c.set(Calendar.YEAR, y); c.set(Calendar.MONTH, m); c.set(Calendar.DAY_OF_MONTH, d)
-            TimePickerDialog(this, { _, h, min ->
-                c.set(Calendar.HOUR_OF_DAY, h); c.set(Calendar.MINUTE, min); c.set(Calendar.SECOND, 0)
-                onSelected(c.timeInMillis)
-            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+            onSelected(c.timeInMillis)
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun chooseTimeOnly(timestamp: Long, onSelected: (Long) -> Unit) {
+        val c = Calendar.getInstance().apply { timeInMillis = timestamp }
+        TimePickerDialog(this, { _, h, min ->
+            c.set(Calendar.HOUR_OF_DAY, h); c.set(Calendar.MINUTE, min); c.set(Calendar.SECOND, 0)
+            c.set(Calendar.MILLISECOND, 0)
+            onSelected(c.timeInMillis)
+        }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
     }
 
     private fun restoreAlarms() {
