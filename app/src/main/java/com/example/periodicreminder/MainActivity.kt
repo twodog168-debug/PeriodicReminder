@@ -200,15 +200,28 @@ class MainActivity : Activity() {
         }
         scroll.addView(root)
         setContentView(scroll)
-        root.viewTreeObserver.addOnGlobalLayoutListener {
-            val frame = Rect(); root.getWindowVisibleDisplayFrame(frame)
-            val visible = root.rootView.height - frame.bottom > dp(150)
-            if (keyboardWasVisible && !visible) (currentFocus as? EditText)?.let { it.clearFocus(); root.requestFocus() }
+        // 监听 ScrollView 的可视区域变化。键盘弹出后主动滚动到表单底部，
+        // 确保“创建通知”按钮不会被 MIUI 输入法盖住。
+        scroll.viewTreeObserver.addOnGlobalLayoutListener {
+            val frame = Rect()
+            scroll.getWindowVisibleDisplayFrame(frame)
+            val visible = scroll.rootView.height - frame.bottom > dp(150)
+            if (visible) {
+                scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+            } else if (keyboardWasVisible) {
+                (currentFocus as? EditText)?.let { focused -> focused.clearFocus(); root.requestFocus() }
+                scroll.post { scroll.scrollTo(0, 0) }
+            }
             keyboardWasVisible = visible
         }
 
         val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
-        val back = actionButton("←", Color.rgb(235, 241, 248), Color.rgb(57, 91, 127)).apply { textSize = 25f; setPadding(0, 0, 0, dp(3)) }
+        // 加粗箭头，接近 Chrome 浏览器返回箭头的视觉样式。
+        val back = actionButton("←", Color.rgb(235, 241, 248), Color.rgb(45, 61, 80)).apply {
+            textSize = 29f
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            setPadding(0, 0, dp(2), dp(3))
+        }
         back.setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
         heading.addView(back, LinearLayout.LayoutParams(dp(42), dp(42)))
         heading.addView(TextView(this).apply {
@@ -491,7 +504,8 @@ class MainActivity : Activity() {
                 id = View.generateViewId(); text = "自定义首次通知时间"
                 textSize = 13f; setTextColor(Color.rgb(65, 79, 99))
             })
-            check(getChildAt(1).id)
+            // 编辑页面默认与新建页面一致：按创建时间开始。
+            check(getChildAt(0).id)
         }
         content.addView(fieldLabel("首次通知时间")); content.addView(startModeEdit, matchWrap())
         val dateValue = TextView(this).apply {
@@ -519,7 +533,7 @@ class MainActivity : Activity() {
         dateTimeRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
         dateTimeRow.addView(clockColumn, LinearLayout.LayoutParams(0, -2, 1f))
         content.addView(dateTimeRow, matchWrap())
-        dateTimeRow.visibility = View.VISIBLE
+        dateTimeRow.visibility = View.GONE
         startModeEdit.setOnCheckedChangeListener { _, checkedId ->
             dateTimeRow.visibility = if (checkedId == startModeEdit.getChildAt(1).id) View.VISIBLE else View.GONE
         }
