@@ -101,8 +101,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        window.statusBarColor = Color.rgb(245, 247, 251)
-        window.navigationBarColor = Color.rgb(245, 247, 251)
+        window.statusBarColor = Color.rgb(255, 247, 248)
+        window.navigationBarColor = Color.rgb(255, 247, 248)
         if (Build.VERSION.SDK_INT >= 23) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         requestNotificationPermission()
         buildUi()
@@ -133,7 +133,7 @@ class MainActivity : Activity() {
 
     private fun buildUi() {
         showingCreatePage = false
-        scroll = ScrollView(this).apply { setBackgroundColor(Color.rgb(245, 247, 251)); clipToPadding = false; isFillViewport = true }
+        scroll = ScrollView(this).apply { setBackgroundColor(Color.rgb(255, 247, 248)); clipToPadding = false; isFillViewport = true }
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(18), dp(20), dp(28))
@@ -159,18 +159,18 @@ class MainActivity : Activity() {
         }
         val headerText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         headerText.addView(TextView(this).apply {
-            text = "自设通知"; textSize = 28f; setTextColor(Color.rgb(27, 40, 60))
+            text = "自设通知"; textSize = 28f; setTextColor(Color.rgb(67, 39, 62))
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
         })
         headerText.addView(TextView(this).apply {
             text = "把重要的事，交给通知来记住。"; textSize = 14f
-            setTextColor(Color.rgb(119, 130, 148)); setPadding(0, dp(5), 0, 0)
+            setTextColor(Color.rgb(137, 112, 132)); setPadding(0, dp(5), 0, 0)
         })
         header.addView(headerText, LinearLayout.LayoutParams(0, -2, 1f))
         val create = TextView(this).apply {
             text = "+"; textSize = 30f; typeface = Typeface.DEFAULT
             gravity = android.view.Gravity.CENTER; setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(41, 111, 183), 16)
+            background = rounded(Color.rgb(204, 48, 78), 16)
             isClickable = true; isFocusable = true
             setOnClickListener { showCreatePage() }
         }
@@ -183,12 +183,12 @@ class MainActivity : Activity() {
         }
         taskHeader.addView(TextView(this).apply {
             text = "通知列表"; textSize = 20f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(34, 45, 62))
+            setTextColor(Color.rgb(67, 39, 62))
         })
         taskHeader.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         runningCountLabel = TextView(this).apply {
-            text = "0 个通知运行中"; textSize = 11f; setTextColor(Color.rgb(40, 132, 104))
-            background = rounded(Color.rgb(230, 246, 239), 20); setPadding(dp(9), dp(5), dp(9), dp(5))
+            text = "0 个通知运行中"; textSize = 11f; setTextColor(Color.rgb(111, 76, 160))
+            background = rounded(Color.rgb(245, 239, 252), 20); setPadding(dp(9), dp(5), dp(9), dp(5))
         }
         taskHeader.addView(runningCountLabel)
         root.addView(taskHeader)
@@ -206,7 +206,7 @@ class MainActivity : Activity() {
     private fun showCreatePage() {
         showingCreatePage = true
         chosenStart = System.currentTimeMillis() + 3_600_000L
-        scroll = ScrollView(this).apply { setBackgroundColor(Color.rgb(245, 247, 251)); clipToPadding = false; isFillViewport = true }
+        scroll = ScrollView(this).apply { setBackgroundColor(Color.rgb(255, 247, 248)); clipToPadding = false; isFillViewport = true }
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(18), dp(20), dp(28))
@@ -216,7 +216,7 @@ class MainActivity : Activity() {
         // 创建按钮放在 ScrollView 外部，固定于页面底部；键盘弹出时由 adjustResize 将其顶到键盘上方。
         val pageLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(245, 247, 251))
+            setBackgroundColor(Color.rgb(255, 247, 248))
         }
         pageLayout.addView(scroll, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
@@ -247,8 +247,8 @@ class MainActivity : Activity() {
         }
 
         val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
-        val back = actionButton("＜", Color.rgb(235, 241, 248), Color.rgb(45, 61, 80)).apply {
-            textSize = 25f
+        val back = actionButton("〈", Color.rgb(255, 235, 239), Color.rgb(194, 48, 76)).apply {
+            textSize = 27f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
             setPadding(0, 0, 0, dp(1))
         }
@@ -256,7 +256,7 @@ class MainActivity : Activity() {
         heading.addView(back, LinearLayout.LayoutParams(dp(42), dp(42)))
         heading.addView(TextView(this).apply {
             text = "新建通知"; textSize = 23f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(27, 40, 60)); setPadding(dp(14), 0, 0, 0)
+            setTextColor(Color.rgb(67, 39, 62)); setPadding(dp(14), 0, 0, 0)
         })
         root.addView(heading, matchWrap().apply { bottomMargin = dp(18) })
 
@@ -264,8 +264,8 @@ class MainActivity : Activity() {
         formCard.addView(fieldLabel("通知内容"))
         titleInput = EditText(this).apply {
             hint = "例如：喝水、休息、吃药"; textSize = 15f; setSingleLine(true)
-            setTextColor(Color.rgb(38, 48, 65)); setHintTextColor(Color.rgb(155, 165, 180))
-            background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            setTextColor(Color.rgb(73, 48, 69)); setHintTextColor(Color.rgb(155, 165, 180))
+            background = rounded(Color.rgb(255, 249, 250), 12, Color.rgb(237, 222, 230), 1)
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
         formCard.addView(titleInput, matchWrap())
@@ -274,13 +274,17 @@ class MainActivity : Activity() {
         val intervalRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
         intervalInput = EditText(this).apply {
             hint = "数值"; setText("1"); inputType = 2; textSize = 15f; setSingleLine(true)
-            setTextColor(Color.rgb(38, 48, 65)); background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            setTextColor(Color.rgb(73, 48, 69)); background = rounded(Color.rgb(255, 249, 250), 12, Color.rgb(237, 222, 230), 1)
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
         unitSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("分钟", "小时", "天"))
-            background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            background = rounded(Color.rgb(255, 249, 250), 12, Color.rgb(237, 222, 230), 1)
             setSelection(1)
+            setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) intervalInput.requestFocus()
+                false
+            }
         }
         intervalRow.addView(intervalInput, LinearLayout.LayoutParams(0, dp(48), 1.2f))
         intervalRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
@@ -292,28 +296,28 @@ class MainActivity : Activity() {
             orientation = RadioGroup.VERTICAL
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "按创建时间开始（创建后等待一个间隔）"
-                textSize = 13f; setTextColor(Color.rgb(65, 79, 99))
+                textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
             })
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "自定义首次通知时间"
-                textSize = 13f; setTextColor(Color.rgb(65, 79, 99))
+                textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
             })
             check(getChildAt(0).id)
         }
         formCard.addView(startModeGroup, matchWrap())
         val startDateValue = TextView(this).apply {
             text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(chosenStart))
-            textSize = 13f; setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
+            textSize = 13f; setTextColor(Color.rgb(111, 76, 160)); gravity = android.view.Gravity.CENTER
         }
         val startClockValue = TextView(this).apply {
             text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(chosenStart))
-            textSize = 13f; setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
+            textSize = 13f; setTextColor(Color.rgb(111, 76, 160)); gravity = android.view.Gravity.CENTER
         }
-        val dateButton = actionButton("选择日期", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+        val dateButton = actionButton("选择日期", Color.rgb(245, 239, 252), Color.rgb(111, 76, 160)).apply {
             setPadding(dp(10), dp(12), dp(10), dp(12))
             setOnClickListener { chooseDateOnly(chosenStart) { chosenStart = it; startDateValue.text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } }
         }
-        val clockButton = actionButton("调整时间", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+        val clockButton = actionButton("调整时间", Color.rgb(245, 239, 252), Color.rgb(111, 76, 160)).apply {
             setPadding(dp(10), dp(12), dp(10), dp(12))
             setOnClickListener { chooseTimeOnly(chosenStart) { chosenStart = it; startClockValue.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it)) } }
         }
@@ -335,13 +339,13 @@ class MainActivity : Activity() {
         countInput = EditText(this).apply {
             hint = "默认 10 次，填写 0 表示无限循环"; setText("10")
             inputType = 2; textSize = 15f; setSingleLine(true)
-            setTextColor(Color.rgb(38, 48, 65)); background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
+            setTextColor(Color.rgb(73, 48, 69)); background = rounded(Color.rgb(255, 249, 250), 12, Color.rgb(237, 222, 230), 1)
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
         formCard.addView(countInput, matchWrap())
         root.addView(formCard, matchWrap())
 
-        val add = actionButton("创建通知", Color.rgb(41, 111, 183), Color.WHITE).apply {
+        val add = actionButton("创建通知", Color.rgb(204, 48, 78), Color.WHITE).apply {
             textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, dp(14), 0, dp(14))
@@ -350,7 +354,7 @@ class MainActivity : Activity() {
         val footer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(10), dp(20), dp(12))
-            setBackgroundColor(Color.rgb(245, 247, 251))
+            setBackgroundColor(Color.rgb(255, 247, 248))
             elevation = dp(8).toFloat()
             addView(add, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(52)
@@ -397,13 +401,13 @@ class MainActivity : Activity() {
 
     private fun sectionTitle(title: String, subtitle: String): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        addView(TextView(this@MainActivity).apply { text = title; textSize = 19f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(34, 45, 62)) })
+        addView(TextView(this@MainActivity).apply { text = title; textSize = 19f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(67, 39, 62)) })
         addView(TextView(this@MainActivity).apply { text = subtitle; textSize = 12f; setTextColor(Color.rgb(139, 149, 165)); setPadding(0, dp(3), 0, dp(10)) })
     }
 
     private fun fieldLabel(s: String) = TextView(this).apply {
         text = s; textSize = 13f; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        setTextColor(Color.rgb(82, 96, 116)); setPadding(dp(1), dp(15), 0, dp(7))
+        setTextColor(Color.rgb(111, 76, 112)); setPadding(dp(1), dp(15), 0, dp(7))
     }
 
     private fun renderList() {
@@ -419,11 +423,11 @@ class MainActivity : Activity() {
             val itemCard = card().apply { setPadding(dp(15), dp(14), dp(15), dp(13)) }
             val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
             top.addView(TextView(this).apply {
-                text = r.title; textSize = 17f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(34, 45, 62)); maxLines = 2
+                text = r.title; textSize = 17f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(67, 39, 62)); maxLines = 2
             }, LinearLayout.LayoutParams(0, -2, 1f))
             val statusText = if (r.enabled) "运行中" else "已停止"
-            val statusColor = if (r.enabled) Color.rgb(34, 132, 98) else Color.rgb(183, 91, 69)
-            val statusBg = if (r.enabled) Color.rgb(231, 246, 239) else Color.rgb(252, 239, 235)
+            val statusColor = if (r.enabled) Color.rgb(111, 76, 160) else Color.rgb(183, 91, 69)
+            val statusBg = if (r.enabled) Color.rgb(245, 239, 252) else Color.rgb(255, 231, 235)
             top.addView(TextView(this).apply {
                 text = statusText; textSize = 11f; setTextColor(statusColor); background = rounded(statusBg, 20)
                 setPadding(dp(10), dp(5), dp(10), dp(5))
@@ -438,23 +442,23 @@ class MainActivity : Activity() {
             val total = if (r.totalCount == 0) "无限" else r.totalCount.toString()
             itemCard.addView(TextView(this).apply {
                 text = "每隔 $unitText   ·   已通知 ${r.sentCount}/$total"
-                textSize = 12f; setTextColor(Color.rgb(119, 131, 149)); setPadding(0, dp(8), 0, dp(8))
+                textSize = 12f; setTextColor(Color.rgb(137, 112, 132)); setPadding(0, dp(8), 0, dp(8))
             })
             val nextText = when {
                 r.enabled -> "下次通知  ${dateFormat.format(Date(r.nextAt))}"
                 else -> "下次通知  —"
             }
             itemCard.addView(TextView(this).apply {
-                text = nextText; textSize = 13f; setTextColor(Color.rgb(54, 91, 129))
-                background = rounded(Color.rgb(242, 247, 252), 9); setPadding(dp(10), dp(9), dp(10), dp(9))
+                text = nextText; textSize = 13f; setTextColor(Color.rgb(111, 76, 160))
+                background = rounded(Color.rgb(255, 241, 244), 9); setPadding(dp(10), dp(9), dp(10), dp(9))
             })
 
             val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, dp(12), 0, 0) }
-            val edit = actionButton("编辑", Color.rgb(235, 241, 248), Color.rgb(57, 91, 127))
+            val edit = actionButton("编辑", Color.rgb(255, 235, 239), Color.rgb(111, 76, 160))
             edit.setOnClickListener { showEditDialog(r) }
             val stop = actionButton(if (r.enabled) "停止" else "开始",
-                if (r.enabled) Color.rgb(252, 241, 235) else Color.rgb(230, 246, 239),
-                if (r.enabled) Color.rgb(172, 91, 62) else Color.rgb(34, 132, 98))
+                if (r.enabled) Color.rgb(255, 235, 239) else Color.rgb(245, 239, 252),
+                if (r.enabled) Color.rgb(172, 91, 62) else Color.rgb(111, 76, 160))
             stop.setOnClickListener {
                 val all = ReminderStore.all(this@MainActivity)
                 val index = all.indexOfFirst { it.id == r.id }
@@ -476,7 +480,7 @@ class MainActivity : Activity() {
                 }
                 renderList()
             }
-            val delete = actionButton("删除", Color.rgb(244, 245, 247), Color.rgb(111, 120, 134))
+            val delete = actionButton("删除", Color.rgb(245, 239, 247), Color.rgb(111, 120, 134))
             delete.setOnClickListener {
                 AlarmScheduler.cancel(this@MainActivity, r.id)
                 ReminderStore.save(this@MainActivity, ReminderStore.all(this@MainActivity).filterNot { it.id == r.id })
@@ -492,7 +496,7 @@ class MainActivity : Activity() {
         }
         if (list.childCount == 0) {
             val empty = card().apply { gravity = android.view.Gravity.CENTER; setPadding(dp(20), dp(28), dp(20), dp(28)) }
-            empty.addView(TextView(this).apply { text = "还没有通知"; textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(87, 101, 120)) })
+            empty.addView(TextView(this).apply { text = "还没有通知"; textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(111, 76, 112)) })
             empty.addView(TextView(this).apply { text = "点击右上角“＋”，添加你的第一条通知。"; textSize = 12f; gravity = android.view.Gravity.CENTER; setTextColor(Color.rgb(145, 154, 168)); setPadding(0, dp(6), 0, 0) })
             list.addView(empty, matchWrap())
         }
@@ -525,6 +529,10 @@ class MainActivity : Activity() {
         val unitEdit = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("分钟", "小时", "天"))
             setSelection(intervalEdit.tag as Int)
+            setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) intervalEdit.requestFocus()
+                false
+            }
         }
         intervalRow.addView(intervalEdit, LinearLayout.LayoutParams(0, dp(48), 1.2f))
         intervalRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
@@ -542,11 +550,11 @@ class MainActivity : Activity() {
             orientation = RadioGroup.VERTICAL
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "按创建时间开始（保存后等待一个间隔）"
-                textSize = 13f; setTextColor(Color.rgb(65, 79, 99))
+                textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
             })
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "自定义首次通知时间"
-                textSize = 13f; setTextColor(Color.rgb(65, 79, 99))
+                textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
             })
             // 编辑页面默认与新建页面一致：按创建时间开始。
             check(getChildAt(0).id)
@@ -554,17 +562,17 @@ class MainActivity : Activity() {
         content.addView(fieldLabel("首次通知时间")); content.addView(startModeEdit, matchWrap())
         val dateValue = TextView(this).apply {
             text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(editedAt)); textSize = 13f
-            setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
+            setTextColor(Color.rgb(111, 76, 160)); gravity = android.view.Gravity.CENTER
         }
         val clockValue = TextView(this).apply {
             text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(editedAt)); textSize = 13f
-            setTextColor(Color.rgb(90, 105, 125)); gravity = android.view.Gravity.CENTER
+            setTextColor(Color.rgb(111, 76, 160)); gravity = android.view.Gravity.CENTER
         }
-        val dateButton = actionButton("修改日期", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+        val dateButton = actionButton("修改日期", Color.rgb(245, 239, 252), Color.rgb(111, 76, 160)).apply {
             setPadding(dp(10), dp(12), dp(10), dp(12))
             setOnClickListener { chooseDateOnly(editedAt) { editedAt = it; dateValue.text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } }
         }
-        val clockButton = actionButton("调整时间", Color.rgb(239, 246, 253), Color.rgb(45, 91, 139)).apply {
+        val clockButton = actionButton("调整时间", Color.rgb(245, 239, 252), Color.rgb(111, 76, 160)).apply {
             setPadding(dp(10), dp(12), dp(10), dp(12))
             setOnClickListener { chooseTimeOnly(editedAt) { editedAt = it; clockValue.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it)) } }
         }
@@ -643,7 +651,7 @@ class MainActivity : Activity() {
     private fun card() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(16), dp(16), dp(16))
-        background = rounded(Color.WHITE, 17, Color.rgb(235, 238, 243), 1)
+        background = rounded(Color.WHITE, 17, Color.rgb(239, 226, 234), 1)
         elevation = dp(2).toFloat()
     }
 
