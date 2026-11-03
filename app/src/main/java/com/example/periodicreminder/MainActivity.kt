@@ -95,7 +95,7 @@ class MainActivity : Activity() {
         titleInput = EditText(this).apply {
             hint = "例如：喝水、休息、吃药"
             textSize = 15f
-            singleLine = true
+            setSingleLine(true)
             setTextColor(Color.rgb(38, 48, 65))
             setHintTextColor(Color.rgb(155, 165, 180))
             background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
@@ -106,7 +106,7 @@ class MainActivity : Activity() {
         formCard.addView(fieldLabel("提醒间隔"))
         val intervalRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
         intervalInput = EditText(this).apply {
-            hint = "数值"; setText("60"); inputType = 2; textSize = 15f; singleLine = true
+            hint = "数值"; setText("60"); inputType = 2; textSize = 15f; setSingleLine(true)
             setTextColor(Color.rgb(38, 48, 65)); background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
@@ -133,7 +133,7 @@ class MainActivity : Activity() {
         formCard.addView(fieldLabel("循环次数"))
         countInput = EditText(this).apply {
             hint = "默认 10 次，填写 0 表示无限循环"
-            setText("10"); inputType = 2; textSize = 15f; singleLine = true
+            setText("10"); inputType = 2; textSize = 15f; setSingleLine(true)
             setTextColor(Color.rgb(38, 48, 65)); background = rounded(Color.rgb(246, 248, 251), 12, Color.rgb(230, 234, 241), 1)
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
