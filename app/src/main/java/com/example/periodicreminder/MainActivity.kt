@@ -199,7 +199,15 @@ class MainActivity : Activity() {
             isFocusableInTouchMode = true
         }
         scroll.addView(root)
-        setContentView(scroll)
+        // 创建按钮放在 ScrollView 外部，固定于页面底部；键盘弹出时由 adjustResize 将其顶到键盘上方。
+        val pageLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.rgb(245, 247, 251))
+        }
+        pageLayout.addView(scroll, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+        ))
+        setContentView(pageLayout)
         // 键盘弹出时，只滚动到当前正在编辑的输入框，绝不直接跳到表单底部。
         // 这样点击“通知内容”时，页面不会突然跳到“循环次数”。
         scroll.viewTreeObserver.addOnGlobalLayoutListener {
@@ -317,12 +325,26 @@ class MainActivity : Activity() {
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
         formCard.addView(countInput, matchWrap())
-        val add = actionButton("创建通知", Color.rgb(41, 111, 183), Color.WHITE).apply {
-            textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(15), 0, dp(15))
-        }
-        add.setOnClickListener { createReminder() }
-        formCard.addView(add, matchWrap().apply { topMargin = dp(18) })
         root.addView(formCard, matchWrap())
+
+        val add = actionButton("创建通知", Color.rgb(41, 111, 183), Color.WHITE).apply {
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(0, dp(14), 0, dp(14))
+            setOnClickListener { createReminder() }
+        }
+        val footer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(10), dp(20), dp(12))
+            setBackgroundColor(Color.rgb(245, 247, 251))
+            elevation = dp(8).toFloat()
+            addView(add, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(52)
+            ))
+        }
+        pageLayout.addView(footer, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
     }
 
     private fun hideKeyboardAndClearFocus() {
