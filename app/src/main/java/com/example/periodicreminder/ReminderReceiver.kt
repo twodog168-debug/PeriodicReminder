@@ -25,7 +25,7 @@ class ReminderReceiver : BroadcastReceiver() {
             context, NotificationIds.next(context), Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val text = if (r.totalCount == 0) "第 $occurrence 次提醒" else "第 $occurrence 次提醒（共 ${r.totalCount} 次）"
+        val text = if (r.totalCount == 0) "第 $occurrence 次" else "第 $occurrence 次（共 ${r.totalCount} 次）"
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(r.title)
@@ -56,7 +56,7 @@ class ReminderReceiver : BroadcastReceiver() {
     private fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val channel = NotificationChannel(CHANNEL_ID, "提醒通知", NotificationManager.IMPORTANCE_HIGH).apply {
+            val channel = NotificationChannel(CHANNEL_ID, "自设通知", NotificationManager.IMPORTANCE_HIGH).apply {
                 setShowBadge(true)
             }
             manager.createNotificationChannel(channel)

@@ -30,7 +30,7 @@ data class Reminder(
     }
 }
 
-/** 根据原始开始时刻推算严格晚于 now 的最近一次提醒，不补发过去的次数。 */
+/** 根据原始开始时刻推算严格晚于 now 的最近一次通知，不补发过去的次数。 */
 object ReminderTiming {
     fun nextOccurrenceAfter(startAt: Long, intervalMillis: Long, now: Long): Long {
         if (intervalMillis <= 0L) return now + 1000L
@@ -60,7 +60,7 @@ object ReminderStore {
     fun nextId(context: Context): Int = (all(context).maxOfOrNull { it.id } ?: 0) + 1
 }
 
-/** 每次通知都分配独立 ID，避免同一提醒的后续通知覆盖前一条。 */
+/** 每次通知都分配独立 ID，避免同一通知的后续通知覆盖前一条。 */
 object NotificationIds {
     @Synchronized
     fun next(context: Context): Int {

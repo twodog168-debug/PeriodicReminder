@@ -9,7 +9,7 @@ class BootReceiver : BroadcastReceiver() {
         val items = ReminderStore.all(context)
         val now = System.currentTimeMillis()
         items.filter { it.enabled }.forEach { r ->
-            // 设备关机期间错过的提醒不补发，直接定位到原周期中最近的未来时刻。
+            // 设备关机期间错过的通知不补发，直接定位到原周期中最近的未来时刻。
             if (r.nextAt <= now) {
                 r.nextAt = ReminderTiming.nextOccurrenceAfter(r.nextAt, r.intervalMillis, now)
             }
