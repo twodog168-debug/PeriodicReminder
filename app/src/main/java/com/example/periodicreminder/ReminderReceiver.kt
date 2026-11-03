@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -19,7 +18,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val r = items.firstOrNull { it.id == id } ?: return
         if (!r.enabled) return
 
-        // 更新通知计数并保存前，当前这条通知序号就是 sentCount + 1。
+        // 当前这条通知序号就是 sentCount + 1。
         val occurrence = r.sentCount + 1
         createChannel(context)
         val open = PendingIntent.getActivity(
@@ -31,12 +30,9 @@ class ReminderReceiver : BroadcastReceiver() {
         } else {
             "第 $occurrence / ${r.totalCount} 次"
         }
-        val desktopIcon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            // Android 通知栏状态栏小图标必须使用单色资源；保留兼容的小图标。
-            .setSmallIcon(R.drawable.ic_notification)
-            // 通知展开区域显示与桌面一致的应用图标。
-            .setLargeIcon(desktopIcon)
+            // 与桌面启动器共用同一图形；状态栏按 Android 规则以单色显示。
+            .setSmallIcon(R.drawable.ic_brand_mark)
             .setContentTitle(r.title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
