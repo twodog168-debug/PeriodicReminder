@@ -200,27 +200,35 @@ class MainActivity : Activity() {
         }
         scroll.addView(root)
         setContentView(scroll)
-        // 监听 ScrollView 的可视区域变化。键盘弹出后主动滚动到表单底部，
-        // 确保“创建通知”按钮不会被 MIUI 输入法盖住。
+        // 键盘弹出时，只滚动到当前正在编辑的输入框，绝不直接跳到表单底部。
+        // 这样点击“通知内容”时，页面不会突然跳到“循环次数”。
         scroll.viewTreeObserver.addOnGlobalLayoutListener {
             val frame = Rect()
             scroll.getWindowVisibleDisplayFrame(frame)
             val visible = scroll.rootView.height - frame.bottom > dp(150)
-            if (visible) {
-                scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
-            } else if (keyboardWasVisible) {
+            if (visible && !keyboardWasVisible) {
+                scroll.post {
+                    val focused = currentFocus as? EditText
+                    if (focused != null) {
+                        val rect = Rect()
+                        if (focused.getGlobalVisibleRect(rect)) {
+                            val bottomLimit = frame.bottom - dp(16)
+                            val overflow = rect.bottom - bottomLimit
+                            if (overflow > 0) scroll.smoothScrollBy(0, overflow)
+                        }
+                    }
+                }
+            } else if (!visible && keyboardWasVisible) {
                 (currentFocus as? EditText)?.let { focused -> focused.clearFocus(); root.requestFocus() }
-                scroll.post { scroll.scrollTo(0, 0) }
             }
             keyboardWasVisible = visible
         }
 
         val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
-        // 加粗箭头，接近 Chrome 浏览器返回箭头的视觉样式。
-        val back = actionButton("←", Color.rgb(235, 241, 248), Color.rgb(45, 61, 80)).apply {
-            textSize = 29f
+        val back = actionButton("＜", Color.rgb(235, 241, 248), Color.rgb(45, 61, 80)).apply {
+            textSize = 25f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setPadding(0, 0, dp(2), dp(3))
+            setPadding(0, 0, 0, dp(1))
         }
         back.setOnClickListener { hideKeyboardAndClearFocus(); showMainPage() }
         heading.addView(back, LinearLayout.LayoutParams(dp(42), dp(42)))
