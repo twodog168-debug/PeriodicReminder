@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.graphics.Rect
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -37,6 +38,8 @@ class MainActivity : Activity() {
     private lateinit var runningCountLabel: TextView
     private var keyboardWasVisible = false
     private var interactionInProgress = false
+    private var touchDownX = 0f
+    private var touchDownY = 0f
     private var editDialogOpen = false
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var chosenStart = System.currentTimeMillis() + 60_000L
@@ -49,23 +52,34 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.action == MotionEvent.ACTION_DOWN) interactionInProgress = true
-        if (ev.action == MotionEvent.ACTION_DOWN && ::root.isInitialized) {
-            val focused = currentFocus
-            if (focused is EditText) {
-                val rect = Rect()
-                focused.getGlobalVisibleRect(rect)
-                val tappedAnotherInput = findEditTextAt(root, ev.rawX.toInt(), ev.rawY.toInt())
-                if (!rect.contains(ev.rawX.toInt(), ev.rawY.toInt()) && tappedAnotherInput == null) {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            interactionInProgress = true
+            touchDownX = ev.rawX
+            touchDownY = ev.rawY
+        }
+
+        val handled = super.dispatchTouchEvent(ev)
+
+        if (ev.action == MotionEvent.ACTION_UP) {
+            val dx = ev.rawX - touchDownX
+            val dy = ev.rawY - touchDownY
+            val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+            val isTap = dx * dx + dy * dy <= touchSlop * touchSlop
+
+            // 只有轻点非输入框区域才收起键盘；滑动页面时保留焦点和键盘。
+            if (isTap && ::root.isInitialized && findEditTextAt(root, ev.rawX.toInt(), ev.rawY.toInt()) == null) {
+                val focused = currentFocus
+                if (focused is EditText) {
                     focused.clearFocus()
                     (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                         .hideSoftInputFromWindow(focused.windowToken, 0)
                     root.requestFocus()
                 }
             }
+            interactionInProgress = false
+        } else if (ev.action == MotionEvent.ACTION_CANCEL) {
+            interactionInProgress = false
         }
-        val handled = super.dispatchTouchEvent(ev)
-        if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) interactionInProgress = false
         return handled
     }
 
