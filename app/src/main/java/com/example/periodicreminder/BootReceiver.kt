@@ -9,9 +9,10 @@ class BootReceiver : BroadcastReceiver() {
         val items = ReminderStore.all(context)
         val now = System.currentTimeMillis()
         items.filter { it.enabled }.forEach { r ->
-            // If the device was off when a reminder was due, notify once after reboot,
-            // then continue from the actual delivery time rather than sending a backlog.
-            if (r.nextAt < now) r.nextAt = now + 1000L
+            // 设备关机期间错过的提醒不补发，直接定位到原周期中最近的未来时刻。
+            if (r.nextAt <= now) {
+                r.nextAt = ReminderTiming.nextOccurrenceAfter(r.nextAt, r.intervalMillis, now)
+            }
             AlarmScheduler.schedule(context, r)
         }
         ReminderStore.save(context, items)

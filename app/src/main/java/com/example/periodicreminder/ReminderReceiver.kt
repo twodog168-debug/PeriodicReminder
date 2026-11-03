@@ -18,29 +18,35 @@ class ReminderReceiver : BroadcastReceiver() {
         val r = items.firstOrNull { it.id == id } ?: return
         if (!r.enabled) return
 
+        // 更新通知计数并保存前，当前这条通知序号就是 sentCount + 1。
+        val occurrence = r.sentCount + 1
         createChannel(context)
         val open = PendingIntent.getActivity(
-            context, id, Intent(context, MainActivity::class.java),
+            context, NotificationIds.next(context), Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val text = if (r.totalCount == 0) "第 $occurrence 次提醒" else "第 $occurrence 次提醒（共 ${r.totalCount} 次）"
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("周期提醒")
-            .setContentText(r.title)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(r.title))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(r.title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setNumber(1)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(open)
             .build()
 
-        try { NotificationManagerCompat.from(context).notify(id, notification) } catch (_: SecurityException) { }
+        try {
+            NotificationManagerCompat.from(context).notify(NotificationIds.next(context), notification)
+        } catch (_: SecurityException) { }
 
-        r.sentCount += 1
+        r.sentCount = occurrence
         if (r.totalCount > 0 && r.sentCount >= r.totalCount) {
             r.enabled = false
             AlarmScheduler.cancel(context, id)
         } else {
-            // Next interval starts when this receiver actually handles the alarm.
+            // 下一次间隔从本次实际触发处理时刻开始计算。
             r.nextAt = System.currentTimeMillis() + r.intervalMillis
             AlarmScheduler.schedule(context, r)
         }
@@ -50,9 +56,10 @@ class ReminderReceiver : BroadcastReceiver() {
     private fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "周期提醒", NotificationManager.IMPORTANCE_HIGH)
-            )
+            val channel = NotificationChannel(CHANNEL_ID, "提醒通知", NotificationManager.IMPORTANCE_HIGH).apply {
+                setShowBadge(true)
+            }
+            manager.createNotificationChannel(channel)
         }
     }
 

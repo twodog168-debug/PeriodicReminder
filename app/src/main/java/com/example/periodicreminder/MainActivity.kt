@@ -36,17 +36,20 @@ class MainActivity : Activity() {
     private lateinit var startModeGroup: RadioGroup
     private lateinit var runningCountLabel: TextView
     private var keyboardWasVisible = false
+    private var interactionInProgress = false
+    private var editDialogOpen = false
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var chosenStart = System.currentTimeMillis() + 60_000L
     private val refreshHandler = Handler(Looper.getMainLooper())
     private val refreshRunnable = object : Runnable {
         override fun run() {
-            if (::list.isInitialized) renderList()
+            if (::list.isInitialized && !showingCreatePage && !editDialogOpen && !interactionInProgress) renderList()
             refreshHandler.postDelayed(this, 1000L)
         }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) interactionInProgress = true
         if (ev.action == MotionEvent.ACTION_DOWN && ::root.isInitialized) {
             val focused = currentFocus
             if (focused is EditText) {
@@ -61,7 +64,9 @@ class MainActivity : Activity() {
                 }
             }
         }
-        return super.dispatchTouchEvent(ev)
+        val handled = super.dispatchTouchEvent(ev)
+        if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) interactionInProgress = false
+        return handled
     }
 
     private fun findEditTextAt(view: View, x: Int, y: Int): EditText? {
@@ -318,14 +323,13 @@ class MainActivity : Activity() {
         val multiplier = when (unitSpinner.selectedItemPosition) { 0 -> 60_000L; 1 -> 3_600_000L; else -> 86_400_000L }
         val now = System.currentTimeMillis()
         val useCustomTime = startModeGroup.checkedRadioButtonId == startModeGroup.getChildAt(1).id
-        val firstAt = if (useCustomTime) {
-            if (chosenStart <= now) now + 1000L else chosenStart
-        } else {
-            now + n * multiplier
-        }
+        val intervalMillis = n * multiplier
+        val firstAt = if (useCustomTime) chosenStart else now + intervalMillis
+        // 自定义时间即使已经过去，也只计算最近的未来时刻，不补发历史提醒。
+        val nextAt = if (useCustomTime) ReminderTiming.nextOccurrenceAfter(firstAt, intervalMillis, now) else firstAt
         val r = Reminder(
-            id = ReminderStore.nextId(this), title = name, intervalMillis = n * multiplier,
-            startAt = firstAt, totalCount = loops, nextAt = firstAt
+            id = ReminderStore.nextId(this), title = name, intervalMillis = intervalMillis,
+            startAt = firstAt, totalCount = loops, nextAt = nextAt
         )
         val all = ReminderStore.all(this).apply { add(r) }
         ReminderStore.save(this, all)
@@ -440,6 +444,8 @@ class MainActivity : Activity() {
     }
 
     private fun showEditDialog(reminder: Reminder) {
+        if (editDialogOpen) return
+        editDialogOpen = true
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(8), dp(22), 0)
@@ -468,6 +474,12 @@ class MainActivity : Activity() {
         intervalRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
         intervalRow.addView(unitEdit, LinearLayout.LayoutParams(0, dp(48), 1f))
         content.addView(fieldLabel("提醒间隔")); content.addView(intervalRow, matchWrap())
+
+        val countEdit = EditText(this).apply {
+            setSingleLine(true); inputType = 2; textSize = 15f
+            hint = "0 表示无限循环"; setText(reminder.totalCount.toString())
+        }
+        content.addView(fieldLabel("循环次数")); content.addView(countEdit, matchWrap())
 
         var editedAt = if (reminder.nextAt > System.currentTimeMillis()) reminder.nextAt else System.currentTimeMillis() + reminder.intervalMillis
         val dateValue = TextView(this).apply {
@@ -500,30 +512,37 @@ class MainActivity : Activity() {
             textSize = 12f; setTextColor(Color.rgb(130, 140, 155)); setPadding(0, dp(10), 0, 0)
         })
 
+        val dialogContent = ScrollView(this).apply { addView(content) }
         val dialog = AlertDialog.Builder(this)
             .setTitle("编辑提醒")
-            .setView(content)
+            .setView(dialogContent)
             .setNegativeButton("取消", null)
             .setPositiveButton("保存", null)
             .create()
+        dialog.setOnDismissListener { editDialogOpen = false }
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val newName = nameInput.text.toString().trim()
                 val value = intervalEdit.text.toString().toLongOrNull()
                 if (newName.isEmpty()) { toast("提醒名称不能为空"); return@setOnClickListener }
                 if (value == null || value <= 0L) { toast("提醒间隔必须大于0"); return@setOnClickListener }
+                val newCount = countEdit.text.toString().toIntOrNull()
+                if (newCount == null || newCount < 0) { toast("循环次数不能小于0"); return@setOnClickListener }
+                if (newCount > 0 && newCount <= reminder.sentCount) { toast("循环次数必须大于已通知次数"); return@setOnClickListener }
                 val factor = when (unitEdit.selectedItemPosition) { 0 -> 60_000L; 1 -> 3_600_000L; else -> 86_400_000L }
                 val newInterval = value * factor
                 val all = ReminderStore.all(this)
                 val index = all.indexOfFirst { it.id == reminder.id }
                 if (index < 0) { dialog.dismiss(); return@setOnClickListener }
                 val old = all[index]
-                val safeAt = if (editedAt <= System.currentTimeMillis()) System.currentTimeMillis() + 1000L else editedAt
+                val now = System.currentTimeMillis()
+                val nextAt = if (old.enabled) ReminderTiming.nextOccurrenceAfter(editedAt, newInterval, now) else 0L
                 val updated = old.copy(
                     title = newName,
                     intervalMillis = newInterval,
-                    startAt = safeAt,
-                    nextAt = if (old.enabled) safeAt else 0L
+                    startAt = editedAt,
+                    totalCount = newCount,
+                    nextAt = nextAt
                 )
                 all[index] = updated
                 AlarmScheduler.cancel(this, updated.id)
@@ -581,7 +600,10 @@ class MainActivity : Activity() {
         var changed = false
         val now = System.currentTimeMillis()
         all.filter { it.enabled }.forEach { r ->
-            if (r.nextAt <= now) { r.nextAt = now + 1000L; changed = true }
+            if (r.nextAt <= now) {
+                r.nextAt = ReminderTiming.nextOccurrenceAfter(r.nextAt, r.intervalMillis, now)
+                changed = true
+            }
             AlarmScheduler.schedule(this, r)
         }
         if (changed) ReminderStore.save(this, all)
