@@ -354,6 +354,9 @@ class MainActivity : Activity() {
         formCard.addView(fieldLabel("首次通知时间"))
         startModeGroup = RadioGroup(this).apply {
             orientation = RadioGroup.VERTICAL
+            isFocusable = false
+            isFocusableInTouchMode = false
+            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "按创建时间开始（创建后等待一个间隔）"
                 textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
@@ -392,11 +395,10 @@ class MainActivity : Activity() {
         dateTimeRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
         dateTimeRow.addView(clockColumn, LinearLayout.LayoutParams(0, -2, 1f))
         formCard.addView(dateTimeRow, matchWrap())
-        dateTimeRow.visibility = View.GONE
+        // 日期时间行始终占位，避免 GONE/VISIBLE 改变表单高度导致 ScrollView 重排跳动。
+        setDateTimeRowEnabled(dateTimeRow, false)
         startModeGroup.setOnCheckedChangeListener { _, checkedId ->
-            val y = scroll.scrollY
-            dateTimeRow.visibility = if (checkedId == startModeGroup.getChildAt(1).id) View.VISIBLE else View.GONE
-            scroll.post { scroll.scrollTo(0, y) }
+            setDateTimeRowEnabled(dateTimeRow, checkedId == startModeGroup.getChildAt(1).id)
         }
 
         formCard.addView(fieldLabel("循环次数"))
@@ -427,6 +429,18 @@ class MainActivity : Activity() {
         pageLayout.addView(footer, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ))
+    }
+
+    // 日期时间行始终占位，只切换可用状态和透明度；不改变 visibility，页面不会重排跳动。
+    private fun setDateTimeRowEnabled(row: LinearLayout, enabled: Boolean) {
+        row.alpha = if (enabled) 1f else 0.42f
+        fun apply(v: View) {
+            if (v is TextView && v.isClickable) v.isEnabled = enabled
+            if (v is ViewGroup) {
+                for (i in 0 until v.childCount) apply(v.getChildAt(i))
+            }
+        }
+        apply(row)
     }
 
     private fun hideKeyboardAndClearFocus() {
@@ -630,8 +644,6 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(8), dp(22), 0)
         }
-        // 提前创建，供“首次通知时间”切换时保持滚动位置。
-        val dialogContent = ScrollView(this)
         val nameInput = EditText(this).apply {
             setSingleLine(true); setText(reminder.title); hint = "通知内容"; textSize = 15f
         }
@@ -667,6 +679,9 @@ class MainActivity : Activity() {
         var editedAt = if (reminder.nextAt > System.currentTimeMillis()) reminder.nextAt else System.currentTimeMillis() + reminder.intervalMillis
         val startModeEdit = RadioGroup(this).apply {
             orientation = RadioGroup.VERTICAL
+            isFocusable = false
+            isFocusableInTouchMode = false
+            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             addView(RadioButton(this@MainActivity).apply {
                 id = View.generateViewId(); text = "按创建时间开始（保存后等待一个间隔）"
                 textSize = 13f; setTextColor(Color.rgb(91, 67, 91))
@@ -706,18 +721,17 @@ class MainActivity : Activity() {
         dateTimeRow.addView(space(10), LinearLayout.LayoutParams(dp(10), 1))
         dateTimeRow.addView(clockColumn, LinearLayout.LayoutParams(0, -2, 1f))
         content.addView(dateTimeRow, matchWrap())
-        dateTimeRow.visibility = View.GONE
+        // 编辑页同样始终占位，只切换可用状态，Dialog 内 ScrollView 不会因内容高度变化而跳动。
+        setDateTimeRowEnabled(dateTimeRow, false)
         startModeEdit.setOnCheckedChangeListener { _, checkedId ->
-            val y = dialogContent.scrollY
-            dateTimeRow.visibility = if (checkedId == startModeEdit.getChildAt(1).id) View.VISIBLE else View.GONE
-            dialogContent.post { dialogContent.scrollTo(0, y) }
+            setDateTimeRowEnabled(dateTimeRow, checkedId == startModeEdit.getChildAt(1).id)
         }
         content.addView(TextView(this).apply {
             text = if (reminder.enabled) "保存后将按新的时间和间隔继续通知。" else "这条通知已经停止；编辑只修改内容，不会自动重新启动。"
             textSize = 12f; setTextColor(Color.rgb(130, 140, 155)); setPadding(0, dp(10), 0, 0)
         })
 
-        dialogContent.addView(content)
+        val dialogContent = ScrollView(this).apply { addView(content) }
         val dialog = AlertDialog.Builder(this)
             .setTitle("编辑通知")
             .setView(dialogContent)
